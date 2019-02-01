@@ -31,6 +31,8 @@ private:
   Coordinates liveCellCoords;
   Coordinates generationCoords;
 
+  std::vector<Coordinates> neighbourCoords;
+
   WINDOW *window; // Parent window
   // Child windows
   WINDOW *infoWindow;

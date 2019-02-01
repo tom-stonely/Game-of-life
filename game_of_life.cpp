@@ -37,6 +37,15 @@ GameOfLife::GameOfLife(int lc) : startLiveCells(lc) {
   liveCellCoords = Coordinates(X_PADDING + 3, Y_PADDING);
   generationCoords = Coordinates(X_PADDING + 4, Y_PADDING);
 
+  neighbourCoords.push_back(Coordinates(-1, -1));
+  neighbourCoords.push_back(Coordinates(-1, 0));
+  neighbourCoords.push_back(Coordinates(-1, 1));
+  neighbourCoords.push_back(Coordinates(0, -1));
+  neighbourCoords.push_back(Coordinates(0, 1));
+  neighbourCoords.push_back(Coordinates(1, -1));
+  neighbourCoords.push_back(Coordinates(1, 0));
+  neighbourCoords.push_back(Coordinates(1, 1));
+
   // Setup all the colour pairs
   init_pair(1, COLOR_BLACK, COLOR_RED);
   init_pair(2, COLOR_BLACK, COLOR_GREEN);
@@ -96,7 +105,11 @@ void GameOfLife::UpdateDisplay() {
   }
   livingCellCount = tempCount;
 
-  mvwprintw(window, titleCoords.x, titleCoords.y, "Conway's Game of Life");
+  // Clear the old statistics
+  wclear(infoWindow);
+  box(infoWindow, ACS_VLINE, ACS_HLINE);
+
+  mvwprintw(infoWindow, titleCoords.x, titleCoords.y, "Conway's Game of Life");
   mvwprintw(infoWindow, liveCellCoords.x, liveCellCoords.y, "Live cells: %d",
             livingCellCount);
   mvwprintw(infoWindow, generationCoords.x, generationCoords.y,
@@ -120,83 +133,21 @@ void GameOfLife::Randomise() {
 }
 
 bool GameOfLife::CheckNeighbours(int i, int j) {
-
-  bool ret;
-
   // Check how many neighbours the cell has
   unsigned neighbours = 0;
-  try {
-    if (grid.at(i - 1).at(j - 1)) {
-      ++neighbours;
+  for (auto neighbour : neighbourCoords) {
+    try {
+      if (grid.at(i + neighbour.x).at(j + neighbour.y)) {
+        ++neighbours;
+      }
+    } catch (const std::out_of_range &oor) {
+      // The exception was thrown due to the cell being on the edge of the grid.
+      // Don't need to handle, just check next neighbour
+      continue;
     }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
   }
 
-  try {
-    if (grid.at(i - 1).at(j)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i - 1).at(j + 1)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i).at(j - 1)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i).at(j + 1)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i + 1).at(j - 1)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i + 1).at(j)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
-  try {
-    if (grid.at(i + 1).at(j + 1)) {
-      ++neighbours;
-    }
-  } catch (const std::out_of_range &oor) {
-    // The exception was thrown due to the cell being on the edge of the grid.
-    // Don't need to handle, just continue
-  }
-
+  bool ret;
   // Live cell scenarios
   if (grid.at(i).at(j)) {
     // Scenario: Underpopulation
@@ -216,7 +167,6 @@ bool GameOfLife::CheckNeighbours(int i, int j) {
   else {
     // Scenario: Creation of Life
     if (neighbours == 3) {
-      grid.at(i).at(j) = true;
       ret = true;
     }
   }
@@ -270,8 +220,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Setup game
   GameOfLife gameOfLife(liveCells);
 
+  // Setup signal handlers
   signal(SIGSTOP, sig_handler);
   signal(SIGABRT, sig_handler);
   signal(SIGTERM, sig_handler);
@@ -281,5 +233,6 @@ int main(int argc, char *argv[]) {
     usleep(1000 * generationMs);
     gameOfLife.Generation();
   }
+
   return 0;
 }
